@@ -1,0 +1,30 @@
+{
+  "manifest_version": "0.3",
+  "name": "sae-tucuman",
+  "display_name": "SAE Tucumán — Consultar causas",
+  "version": "0.1.0",
+  "description": "Consultá causas del SAE (Poder Judicial de Tucumán) desde Claude: carátula, partes, juzgado y movimientos. Pegá la URL del expediente en el portal del SAE, o el procid + jurisdiction.",
+  "author": {
+    "name": "Juan Pablo Terraf"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "dist/stdio.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/stdio.js"]
+    }
+  },
+  "tools": [
+    {
+      "name": "sae_consultar_causa",
+      "description": "Trae carátula, partes, juzgado y movimientos de un expediente del SAE por URL o procid+jurisdiction (sin captcha)."
+    },
+    {
+      "name": "sae_listar_fueros",
+      "description": "Lista los fueros (jurisdicciones) públicos de un centro judicial del SAE y los centros disponibles. Sin captcha."
+    }
+  ],
+  "keywords": ["sae", "tucuman", "expedientes", "legal", "argentina"],
+  "license": "MIT"
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.log
+.env
+.DS_Store
+
+# Bundles empaquetados (se publican como assets de Release, no en el repo)
+*.mcpb
+
+# Respaldos y temporales locales
+.backup-pre-fueros/
+*.bak
+*.bak-*
+src.bak*/
+dist.bak*/
+tmp-*.mjs

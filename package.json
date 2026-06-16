@@ -1,0 +1,31 @@
+{
+  "name": "sae-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server para consultar causas del SAE (Poder Judicial de Tucumán) desde Claude (Desktop, Cowork, claude.ai).",
+  "type": "module",
+  "bin": {
+    "sae-mcp": "dist/stdio.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/stdio.js",
+    "start:http": "node dist/http.js",
+    "dev": "tsx src/stdio.ts",
+    "dev:http": "tsx src/http.ts",
+    "playwright:install": "playwright install chromium"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "express": "^4.21.2",
+    "pdf-parse": "^1.1.1",
+    "playwright": "^1.49.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

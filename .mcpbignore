@@ -1,0 +1,26 @@
+# El bundle Lite solo necesita dist/ + las deps de RUNTIME (sdk, zod, express).
+# Patrones ** para capturar también las rutas internas de pnpm (.pnpm/<pkg>@ver/...).
+
+# Playwright (búsqueda por número) — no va en el Lite.
+**/playwright/
+**/playwright-core/
+
+# Herramientas de build (typescript, tsx, esbuild) — el runtime no las usa.
+**/typescript/
+**/tsx/
+**/esbuild/
+**/@esbuild/
+**/@types/
+
+node_modules/.cache/
+
+# Fuentes y config de build.
+src/
+tsconfig.json
+*.log
+.git/
+.gitignore
+*.mcpb
+
+# Respaldos locales — no distribuir.
+.backup-pre-fueros/
