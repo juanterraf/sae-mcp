@@ -145,7 +145,10 @@ src/
                   #   fueros/centros, matchFuero, normalizeSaeNumber, anti-SSRF
   resolver.ts     # búsqueda por número con Playwright + reCAPTCHA (barrido multi-fuero)
   tools.ts        # las 4 tools + schemas zod + formateo
-  pdf.ts          # extracción de texto de PDFs (sin OCR)
+  pdf.ts          # extracción de texto de PDFs (digital + fallback OCR)
+  ocr.ts          # OCR de PDFs escaneados vía pdftoppm + tesseract (requiere
+                  #   poppler-utils y tesseract-ocr[-spa] instalados; si faltan,
+                  #   se degrada a "sin texto extraíble". SAE_OCR=0 lo apaga)
   logger.ts       # logs a stderr (stdout está reservado para el protocolo MCP)
   server.ts       # arma el McpServer (agnóstico de transporte)
   stdio.ts        # entrypoint local (Desktop/Cowork)

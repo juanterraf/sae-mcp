@@ -15,7 +15,7 @@ import {
   type Jurisdiction,
   type SaeHistoryResponse,
 } from "./sae-client.js";
-import { extractPdfText } from "./pdf.js";
+import { extractPdfTextConOcr, type PdfTextOcr } from "./pdf.js";
 // Solo el TIPO (se borra en runtime). El resolver (que arrastra Playwright) se
 // carga con import dinámico DENTRO del handler, solo si la tool está habilitada.
 // NUNCA importar resolver.js en runtime acá: el bundle "lite" no trae Playwright.
@@ -191,13 +191,13 @@ async function fetchArchivoText(
   jid: string,
   histid: number,
   archivo: { nombre: string; extension: string },
-): Promise<{ text: string; pages: number } | null> {
+): Promise<PdfTextOcr | null> {
   for (const filename of [archivo.nombre, `${archivo.nombre}.${archivo.extension}`]) {
     try {
       const u = await getArchivoUrl({ procid: pid, jurisdictionId: jid, histid, filename });
       if (!u) continue;
       const { buffer } = await downloadBinary(u);
-      return await extractPdfText(buffer);
+      return await extractPdfTextConOcr(buffer);
     } catch {
       // probar la siguiente variante de nombre
     }
@@ -205,7 +205,22 @@ async function fetchArchivoText(
   return null;
 }
 
-const SIN_TEXTO = "(sin texto extraíble — probablemente escaneado; OCR no habilitado)";
+const SIN_TEXTO_SIN_OCR =
+  "(sin texto extraíble — PDF escaneado y este servidor no tiene OCR instalado: faltan poppler-utils y/o tesseract-ocr)";
+const SIN_TEXTO_OCR_FALLO =
+  "(sin texto extraíble — PDF escaneado; el OCR corrió pero no pudo reconocer texto)";
+
+// Arma el título y el cuerpo de una parte (proveído o adjunto) según cómo se
+// obtuvo el texto (digital, OCR, o nada).
+function renderParte(r: PdfTextOcr): { sufijo: string; cuerpo: string } {
+  if (r.ocr === "usado") {
+    const notas = ["texto reconocido por OCR de un PDF escaneado — puede contener errores"];
+    if (r.ocrTruncado) notas.push("por su extensión, el OCR cubrió solo las primeras páginas");
+    return { sufijo: ", OCR", cuerpo: `[${notas.join("; ")}]\n${r.text}` };
+  }
+  if (r.text) return { sufijo: "", cuerpo: r.text };
+  return { sufijo: "", cuerpo: r.ocr === "no_disponible" ? SIN_TEXTO_SIN_OCR : SIN_TEXTO_OCR_FALLO };
+}
 
 export function registerTools(server: McpServer) {
   // --- Tool 1: consultar por URL o procid+jurisdiction (sin captcha) ---
@@ -277,7 +292,8 @@ export function registerTools(server: McpServer) {
 
   // --- Tool: traer el TEXTO de un movimiento (proveído + adjuntos) ---
   // Captcha-free (usa /history/text/download y /history/file). Extrae texto
-  // digital con pdf-parse; NO hace OCR (un PDF escaneado se reporta como tal).
+  // digital con pdf-parse; si el PDF es un escaneo (actas de oficiales de
+  // justicia, cédulas diligenciadas), cae a OCR con tesseract (ver ocr.ts).
   server.registerTool(
     "sae_traer_documento",
     {
@@ -285,8 +301,9 @@ export function registerTools(server: McpServer) {
       description:
         "Dado un expediente (URL o procid+jurisdiction) y el #histid de un movimiento " +
         "(lo lista sae_consultar_causa), baja el proveído y/o los adjuntos PDF de ese movimiento " +
-        "y devuelve su TEXTO para leer, resumir o analizar. Extrae texto digital (sin OCR): si el " +
-        "PDF está escaneado, lo indica. NO usa captcha — anda en cualquier entorno.",
+        "y devuelve su TEXTO para leer, resumir o analizar. Extrae texto digital y, si el PDF está " +
+        "escaneado (actas, cédulas diligenciadas), aplica OCR automáticamente. " +
+        "NO usa captcha — anda en cualquier entorno.",
       inputSchema: {
         url: z.string().url().optional().describe("URL del expediente en el portal del SAE"),
         procid: z.string().optional().describe("procid, si no pasás URL"),
@@ -341,8 +358,9 @@ export function registerTools(server: McpServer) {
             const u = await getTextoPdfUrl({ procid: pid, jurisdictionId: jid, histid });
             if (u) {
               const { buffer } = await downloadBinary(u);
-              const { text: t, pages } = await extractPdfText(buffer);
-              pushParte(`Proveído (${pages} pág)`, t || SIN_TEXTO);
+              const r = await extractPdfTextConOcr(buffer);
+              const { sufijo, cuerpo } = renderParte(r);
+              pushParte(`Proveído (${r.pages} pág${sufijo})`, cuerpo);
             }
           } catch (e) {
             partes.push(`### Proveído\n(no se pudo traer: ${e instanceof Error ? e.message : String(e)})`);
@@ -361,7 +379,8 @@ export function registerTools(server: McpServer) {
               partes.push(`### Adjunto ${a.nombre}\n(no se pudo descargar)`);
               continue;
             }
-            pushParte(`Adjunto ${a.nombre} (${r.pages} pág)`, r.text || SIN_TEXTO);
+            const { sufijo, cuerpo } = renderParte(r);
+            pushParte(`Adjunto ${a.nombre} (${r.pages} pág${sufijo})`, cuerpo);
           }
         }
 
